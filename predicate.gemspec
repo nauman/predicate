@@ -27,7 +27,7 @@ Gem::Specification.new do |spec|
     - Thread-safe operations
   DESC
 
-  spec.homepage      = 'https://github.com/StockLive-Group/predicate'
+  spec.homepage      = 'https://github.com/nauman/predicate'
   spec.license       = 'MIT'
   spec.required_ruby_version = '>= 3.0.0'
 
@@ -50,9 +50,9 @@ Gem::Specification.new do |spec|
   # Metadata
   spec.metadata = {
     'homepage_uri' => spec.homepage,
-    'source_code_uri' => 'https://github.com/StockLive-Group/predicate',
-    'changelog_uri' => 'https://github.com/StockLive-Group/predicate/blob/main/CHANGELOG.md',
-    'bug_tracker_uri' => 'https://github.com/StockLive-Group/predicate/issues',
-    'documentation_uri' => 'https://github.com/StockLive-Group/predicate/blob/main/README.md'
+    'source_code_uri' => 'https://github.com/nauman/predicate',
+    'changelog_uri' => 'https://github.com/nauman/predicate/blob/main/CHANGELOG.md',
+    'bug_tracker_uri' => 'https://github.com/nauman/predicate/issues',
+    'documentation_uri' => 'https://github.com/nauman/predicate/blob/main/README.md'
   }
 end

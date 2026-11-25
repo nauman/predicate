@@ -59,7 +59,7 @@ because the version already exists.
 
 No RubyGems API key exists for this gem: CI exchanges its GitHub OIDC token for
 a short-lived credential. The trusted publisher on rubygems.org binds the
-`StockLive-Group` owner, the `predicate` repository and the `release.yml`
+`nauman` owner, the `predicate` repository and the `release.yml`
 workflow; renaming the workflow breaks publishing until that binding is updated.
 
 ## 4. Confirm

@@ -6,7 +6,7 @@ name: Release to RubyGems
 # No API key is stored anywhere. RubyGems trusted publishing exchanges this
 # workflow's GitHub OIDC token for a short-lived push credential. The trusted
 # publisher on rubygems.org binds exactly:
-#   owner StockLive-Group · repository predicate · workflow release.yml
+#   owner nauman · repository predicate · workflow release.yml
 #   gem predicate-rb
 # Renaming this file breaks publishing until the binding is updated.
 #
@@ -81,7 +81,7 @@ jobs:
       # already exists and RubyGems records the owner only with the key.
       - name: Exchange the OIDC token for a RubyGems credential
         env:
-          RUBYGEMS_OWNER: stocklive
+          RUBYGEMS_OWNER: naumant
         run: |
           jwt=$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=rubygems.org" | jq -r .value)
