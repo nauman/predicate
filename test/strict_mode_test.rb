@@ -2,7 +2,7 @@
 
 require_relative 'test_helper'
 
-# Strict mode (1.2.2): a predicate that raises or does not exist halts the
+# Strict mode (1.3.0): a predicate that raises or does not exist halts the
 # evaluation instead of reading as false — and as true once negated.
 class StrictModeTest < Minitest::Test
   def setup
