@@ -4,88 +4,163 @@
   "title": "predicate/v1 rule document (draft)",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "id", "revision", "facts", "condition"],
+  "required": [
+    "schema",
+    "id",
+    "facts",
+    "condition"
+  ],
   "properties": {
-    "schema": { "const": "predicate/v1" },
-    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$", "maxLength": 128 },
-    "revision": { "type": "integer", "minimum": 1 },
-    "description": { "type": "string", "maxLength": 512 },
+    "schema": {
+      "const": "predicate/v1"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
     "facts": {
       "type": "object",
       "minProperties": 1,
-      "maxProperties": 32,
-      "propertyNames": { "pattern": "^[a-z][a-z0-9_]{0,63}$" },
-      "additionalProperties": { "$ref": "#/$defs/fact" }
+      "additionalProperties": {
+        "$ref": "#/$defs/fact"
+      }
     },
-    "condition": { "$ref": "#/$defs/node" }
+    "condition": {
+      "$ref": "#/$defs/node"
+    }
   },
   "$defs": {
     "fact": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "properties": {
-        "type": { "enum": ["boolean", "integer", "number", "string"] },
-        "description": { "type": "string", "maxLength": 256 }
+        "type": {
+          "enum": [
+            "boolean",
+            "integer",
+            "number",
+            "string"
+          ]
+        }
       }
     },
-    "factName": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$" },
+    "factName": {
+      "type": "string",
+      "minLength": 1
+    },
     "literal": {
-      "oneOf": [
-        { "type": "boolean" },
-        { "type": "number" },
-        { "type": "string", "maxLength": 256 }
+      "type": [
+        "boolean",
+        "number",
+        "string"
       ]
     },
     "node": {
       "oneOf": [
-        { "$ref": "#/$defs/group" },
-        { "$ref": "#/$defs/negation" },
-        { "$ref": "#/$defs/comparison" },
-        { "$ref": "#/$defs/membership" }
+        {
+          "$ref": "#/$defs/group"
+        },
+        {
+          "$ref": "#/$defs/negation"
+        },
+        {
+          "$ref": "#/$defs/comparison"
+        },
+        {
+          "$ref": "#/$defs/membership"
+        }
       ]
     },
     "group": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["op", "args"],
+      "required": [
+        "op",
+        "args"
+      ],
       "properties": {
-        "op": { "enum": ["all", "any"] },
-        "args": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "$ref": "#/$defs/node" } }
+        "op": {
+          "enum": [
+            "all",
+            "any"
+          ]
+        },
+        "args": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/node"
+          }
+        }
       }
     },
     "negation": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["op", "arg"],
+      "required": [
+        "op",
+        "arg"
+      ],
       "properties": {
-        "op": { "const": "not" },
-        "arg": { "$ref": "#/$defs/node" }
+        "op": {
+          "const": "not"
+        },
+        "arg": {
+          "$ref": "#/$defs/node"
+        }
       }
     },
     "comparison": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["op", "fact", "value"],
+      "required": [
+        "op",
+        "fact",
+        "value"
+      ],
       "properties": {
-        "op": { "enum": ["eq", "ne", "gt", "gte", "lt", "lte"] },
-        "fact": { "$ref": "#/$defs/factName" },
-        "value": { "$ref": "#/$defs/literal" }
+        "op": {
+          "enum": [
+            "eq",
+            "ne",
+            "gt",
+            "gte",
+            "lt",
+            "lte"
+          ]
+        },
+        "fact": {
+          "$ref": "#/$defs/factName"
+        },
+        "value": {
+          "$ref": "#/$defs/literal"
+        }
       }
     },
     "membership": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["op", "fact", "values"],
+      "required": [
+        "op",
+        "fact",
+        "values"
+      ],
       "properties": {
-        "op": { "const": "in" },
-        "fact": { "$ref": "#/$defs/factName" },
+        "op": {
+          "const": "in"
+        },
+        "fact": {
+          "$ref": "#/$defs/factName"
+        },
         "values": {
           "type": "array",
           "minItems": 1,
-          "maxItems": 100,
-          "uniqueItems": true,
-          "items": { "$ref": "#/$defs/literal" }
+          "items": {
+            "$ref": "#/$defs/literal"
+          }
         }
       }
     }

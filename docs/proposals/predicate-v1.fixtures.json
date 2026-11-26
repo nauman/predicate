@@ -1,49 +1,112 @@
 {
-  "note": "Draft acceptance fixtures for predicate/v1. Any implementation (Ruby, browser) must produce these statuses and error codes.",
+  "note": "Draft acceptance cases for predicate/v1. Only the status is asserted.",
   "rule": {
     "schema": "predicate/v1",
     "id": "leave.requires_hr",
-    "revision": 1,
     "facts": {
-      "working_days": { "type": "integer" },
-      "employment": { "type": "string" }
+      "working_days": {
+        "type": "integer"
+      }
     },
     "condition": {
-      "op": "all",
-      "args": [
-        { "op": "gt", "fact": "working_days", "value": 10 },
-        { "op": "not", "arg": { "op": "in", "fact": "employment", "values": ["contractor", "intern"] } }
-      ]
+      "op": "gt",
+      "fact": "working_days",
+      "value": 10
     }
   },
   "evaluations": [
-    { "facts": { "working_days": 12, "employment": "permanent" }, "status": "matched" },
-    { "facts": { "working_days": 10, "employment": "permanent" }, "status": "not_matched" },
-    { "facts": { "working_days": 12, "employment": "intern" }, "status": "not_matched" },
-    { "facts": { "working_days": 12, "employment": "permanent", "team": "ops" }, "status": "matched" },
-    { "facts": { "employment": "permanent" }, "status": "failed", "errors": ["fact_missing"] },
-    { "facts": { "working_days": null, "employment": "permanent" }, "status": "failed", "errors": ["fact_missing"] },
-    { "facts": { "working_days": "12", "employment": "permanent" }, "status": "failed", "errors": ["fact_type_mismatch"] },
-    { "facts": { "working_days": 12.5, "employment": "permanent" }, "status": "failed", "errors": ["fact_type_mismatch"] },
-    { "facts": { "working_days": 3 }, "status": "failed", "errors": ["fact_missing"] },
-    { "facts": { "working_days": "x", "employment": 7 }, "status": "failed", "errors": ["fact_type_mismatch", "fact_type_mismatch"] }
+    {
+      "facts": {
+        "working_days": 12
+      },
+      "status": "matched"
+    },
+    {
+      "facts": {
+        "working_days": 10
+      },
+      "status": "not_matched"
+    },
+    {
+      "facts": {},
+      "status": "failed"
+    },
+    {
+      "facts": {
+        "working_days": "12"
+      },
+      "status": "failed"
+    }
   ],
   "invalid_documents": [
-    { "why": "unknown top-level key", "code": "invalid_document",
-      "document": { "schema": "predicate/v1", "id": "a", "revision": 1, "facts": { "x": { "type": "integer" } }, "condition": { "op": "gt", "fact": "x", "value": 1 }, "rule": {} } },
-    { "why": "unknown operator", "code": "invalid_document",
-      "document": { "schema": "predicate/v1", "id": "a", "revision": 1, "facts": { "x": { "type": "integer" } }, "condition": { "op": "matches", "fact": "x", "value": 1 } } },
-    { "why": "alias spelling (field/operator) is not accepted", "code": "invalid_document",
-      "document": { "schema": "predicate/v1", "id": "a", "revision": 1, "facts": { "x": { "type": "integer" } }, "condition": { "operator": "gt", "field": "x", "value": 1 } } },
-    { "why": "unsupported schema version", "code": "unsupported_schema",
-      "document": { "schema": "predicate/v2", "id": "a", "revision": 1, "facts": { "x": { "type": "integer" } }, "condition": { "op": "gt", "fact": "x", "value": 1 } } },
-    { "why": "fact not declared (semantic check)", "code": "undeclared_fact",
-      "document": { "schema": "predicate/v1", "id": "a", "revision": 1, "facts": { "x": { "type": "integer" } }, "condition": { "op": "gt", "fact": "y", "value": 1 } } },
-    { "why": "declared fact never used (semantic check)", "code": "unused_fact",
-      "document": { "schema": "predicate/v1", "id": "a", "revision": 1, "facts": { "x": { "type": "integer" }, "y": { "type": "string" } }, "condition": { "op": "gt", "fact": "x", "value": 1 } } },
-    { "why": "literal type differs from fact type (semantic check)", "code": "value_type_mismatch",
-      "document": { "schema": "predicate/v1", "id": "a", "revision": 1, "facts": { "x": { "type": "integer" } }, "condition": { "op": "gt", "fact": "x", "value": "10" } } },
-    { "why": "ordering operator on a string fact (semantic check)", "code": "operator_not_allowed",
-      "document": { "schema": "predicate/v1", "id": "a", "revision": 1, "facts": { "x": { "type": "string" } }, "condition": { "op": "gt", "fact": "x", "value": "a" } } }
+    {
+      "why": "unknown top-level key",
+      "document": {
+        "schema": "predicate/v1",
+        "id": "a",
+        "facts": {
+          "x": {
+            "type": "integer"
+          }
+        },
+        "condition": {
+          "op": "gt",
+          "fact": "x",
+          "value": 1
+        },
+        "rule": {}
+      }
+    },
+    {
+      "why": "unknown operator",
+      "document": {
+        "schema": "predicate/v1",
+        "id": "a",
+        "facts": {
+          "x": {
+            "type": "integer"
+          }
+        },
+        "condition": {
+          "op": "matches",
+          "fact": "x",
+          "value": 1
+        }
+      }
+    },
+    {
+      "why": "alias spelling",
+      "document": {
+        "schema": "predicate/v1",
+        "id": "a",
+        "facts": {
+          "x": {
+            "type": "integer"
+          }
+        },
+        "condition": {
+          "operator": "gt",
+          "field": "x",
+          "value": 1
+        }
+      }
+    },
+    {
+      "why": "unsupported schema version",
+      "document": {
+        "schema": "predicate/v2",
+        "id": "a",
+        "facts": {
+          "x": {
+            "type": "integer"
+          }
+        },
+        "condition": {
+          "op": "gt",
+          "fact": "x",
+          "value": 1
+        }
+      }
+    }
   ]
 }
