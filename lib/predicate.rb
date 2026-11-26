@@ -7,6 +7,7 @@ require_relative 'predicate/core'
 require_relative 'predicate/dsl'
 require_relative 'predicate/combinators'
 require_relative 'predicate/model_integration'
+require_relative 'predicate/declarative'
 
 # Predicate Library
 #
@@ -85,6 +86,19 @@ module Predicate
   #   Predicate.clear_registry!
   def self.clear_registry!
     Registry.clear_registry!
+  end
+
+  # Define a declarative predicate without evaluating Ruby in the condition.
+  def self.define_declarative(entity, name, document)
+    core = Core.new(entity)
+    core.add_declarative(name, document)
+    Registry.register(entity, core)
+    core
+  end
+
+  # Alias for the explicit evaluation entry point.
+  def self.evaluate(entity, name, state)
+    Registry.fetch(entity).evaluate(name, state)
   end
 
   # REGISTRY
