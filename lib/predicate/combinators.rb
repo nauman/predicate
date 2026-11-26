@@ -79,6 +79,9 @@ module Predicate
           raise ArgumentError, "Invalid predicate type: #{predicate.class}"
         end
       rescue StandardError => e
+        # Strict mode: a failure must not read as false (and so as true once negated)
+        raise if @core.respond_to?(:strict?) && @core.strict?
+
         Rails.logger.error "Combinator predicate failed: #{e.message}" if defined?(Rails) && Rails.respond_to?(:logger)
         false
       end
@@ -90,6 +93,9 @@ module Predicate
       def execute_predicate(predicate, state)
         predicate.call(state)
       rescue StandardError => e
+        # Strict mode: a failure must not read as false (and so as true once negated)
+        raise if @core.respond_to?(:strict?) && @core.strict?
+
         Rails.logger.error "Combinator predicate failed: #{e.message}" if defined?(Rails) && Rails.respond_to?(:logger)
         false
       end

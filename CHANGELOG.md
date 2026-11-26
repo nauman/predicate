@@ -6,6 +6,24 @@ workflow refuses to publish a version with no entry — see RELEASING.md.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-11-26
+
+### Added
+- Opt-in strict mode: `Predicate.define(:leave, strict: true)` (or
+  `Predicate::Core.new(:leave, strict: true)`). A predicate that raises now
+  raises `Predicate::EvaluationError` (original error as `cause`,
+  `predicate_name` set), and calling a predicate or section that is not defined
+  raises `Predicate::UndefinedPredicate`. Combinators pass these through, so
+  `not_predicate(:blocked)` and `none_of(:blocked)` no longer come out `true`
+  when `:blocked` crashed or is a typo. The default is unchanged: failures and
+  undefined predicates still read as `false`.
+
+### Fixed
+- `validates_numericality_of` and `validates_length_of` returned `false` for a
+  non-numeric value or one without a length only because a `LocalJumpError`
+  was swallowed, logging "unexpected return" on every such call under Rails.
+  They now return `false` directly. Results are unchanged.
+
 ## [1.2.1] - 2026-11-26
 
 ### Fixed

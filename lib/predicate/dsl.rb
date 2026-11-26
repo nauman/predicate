@@ -49,12 +49,12 @@ module Predicate
     class Builder
       attr_reader :entity, :core, :current_section
 
-      def initialize(entity, core = nil, cache_ttl: nil, thread_safe: false)
+      def initialize(entity, core = nil, cache_ttl: nil, thread_safe: false, strict: false)
         @entity = entity.to_sym
         @cache_ttl = cache_ttl
         @thread_safe = thread_safe
         # Create core immediately with parameters (needed for predicate definitions)
-        @core = core || Core.new(@entity, cache_ttl: cache_ttl, thread_safe: thread_safe)
+        @core = core || Core.new(@entity, cache_ttl: cache_ttl, thread_safe: thread_safe, strict: strict)
         @current_section = nil
         @defined_predicates = {}
       end
@@ -292,7 +292,7 @@ module Predicate
 
         define_predicate(predicate_name) do |state|
           value = state[field]
-          return false unless value.is_a?(Numeric)
+          next false unless value.is_a?(Numeric)
 
           checks = []
           checks << @core.greater_than?(value, options[:greater_than]) if options[:greater_than]
@@ -326,7 +326,7 @@ module Predicate
 
         define_predicate(predicate_name) do |state|
           value = state[field]
-          return false unless value.respond_to?(:length)
+          next false unless value.respond_to?(:length)
 
           length = value.length
           checks = []

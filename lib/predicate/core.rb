@@ -29,7 +29,10 @@ module Predicate
     # @param entity [Symbol, String] The entity name
     # @param cache_ttl [Numeric, nil] Cache time-to-live in seconds (nil = no expiration)
     # @param thread_safe [Boolean] Enable thread-safe cache operations (default: false)
-    def initialize(entity, cache_ttl: nil, thread_safe: false)
+    # @param strict [Boolean] Raise Predicate::EvaluationError instead of returning
+    #   false when a predicate raises or is undefined (default: false)
+    def initialize(entity, cache_ttl: nil, thread_safe: false, strict: false)
+      @strict = strict
       @entity = entity.to_sym
       @predicates = {}
       @sections = {}
@@ -43,6 +46,11 @@ module Predicate
       @cache_writes = 0        # Track writes for periodic cleanup
       @thread_safe = thread_safe # Enable thread-safe operations
       @cache_mutex = thread_safe ? Mutex.new : nil # Mutex for thread-safety
+    end
+
+    # @return [Boolean] True when failures raise instead of reading as false
+    def strict?
+      @strict
     end
 
     # Add a predicate to the core
@@ -110,7 +118,11 @@ module Predicate
 
       # Find and execute predicate
       predicate = find_predicate(name)
-      return false unless predicate
+      unless predicate
+        raise UndefinedPredicate.new("Undefined predicate: #{name}", predicate_name: name) if @strict
+
+        return false
+      end
 
       begin
         result = predicate.call(state)
@@ -122,6 +134,7 @@ module Predicate
         result
       rescue StandardError => e
         track_performance(name, Predicate::Util.now - start_time)
+        raise evaluation_error(name, e) if @strict
 
         # Log error but don't raise - predicates should be resilient
         Rails.logger.error "Predicate #{name} failed: #{e.message}" if defined?(Rails) && Rails.respond_to?(:logger)
@@ -167,12 +180,17 @@ module Predicate
       # Execute section block to get predicates
       section_predicates = {}
       section = @sections[section_name.to_sym]
-      return false unless section
-
-      section.call(section_predicates)
+      section&.call(section_predicates)
 
       predicate = section_predicates[predicate_name.to_sym]
-      return false unless predicate
+      unless predicate
+        if @strict
+          raise UndefinedPredicate.new("Undefined section predicate: #{section_name}/#{predicate_name}",
+                                       predicate_name: combined_name)
+        end
+
+        return false
+      end
 
       begin
         result = predicate.call(state)
@@ -186,6 +204,7 @@ module Predicate
       rescue StandardError => e
         duration = Predicate::Util.now - start_time
         track_performance(combined_name.to_sym, duration)
+        raise evaluation_error(combined_name, e) if @strict
 
         # Log error but don't raise - predicates should be resilient
         if defined?(Rails) && Rails.respond_to?(:logger)
@@ -249,6 +268,15 @@ module Predicate
     end
 
     private
+
+    # Strict mode: wrap a predicate's error, keeping the original as +cause+.
+    # An EvaluationError from a nested predicate is passed through unchanged so
+    # it still names the predicate that actually failed.
+    def evaluation_error(name, error)
+      return error if error.is_a?(EvaluationError)
+
+      EvaluationError.new("Predicate #{name} failed: #{error.message}", predicate_name: name)
+    end
 
     # Run the block under the cache mutex when thread-safe mode is on.
     # Re-entrant: a predicate that calls another predicate on the same core

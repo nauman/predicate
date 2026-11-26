@@ -35,16 +35,39 @@ module Predicate
   # Custom exception for predicate-related errors
   class InvalidPredicate < StandardError; end
 
+  # Raised in strict mode when a predicate cannot produce an answer: its block
+  # raised (the original error is available as +cause+), or — see
+  # UndefinedPredicate — it does not exist. Outside strict mode both cases are
+  # reported as +false+.
+  class EvaluationError < StandardError
+    attr_reader :predicate_name
+
+    def initialize(message = nil, predicate_name: nil)
+      super(message)
+      @predicate_name = predicate_name
+    end
+  end
+
+  # Raised in strict mode when the predicate or section called is not defined.
+  class UndefinedPredicate < EvaluationError; end
+
   # Main entry point for defining predicates
   # @param entity [Symbol, String] The entity name (e.g., :assessment, :sale)
   # @param cache_ttl [Numeric, nil] Cache time-to-live in seconds (nil = no expiration)
   # @param thread_safe [Boolean] Enable thread-safe cache operations (default: false)
+  # @param strict [Boolean] Raise Predicate::EvaluationError instead of returning
+  #   false when a predicate raises or is undefined (default: false)
   # @param block [Proc] Block containing predicate definitions
   # @return [Predicate::Core] The predicate instance
   # @example
   #   Predicate.define(:assessment) do
   #     has_media { |s| is_present?(s[:media_attachment_ids]) }
   #     wizard_complete { |s| has_media(s) && has_title(s) }
+  #   end
+  # @example Strict: a failed or missing predicate halts instead of reading as false
+  #   Predicate.define(:leave, strict: true) do
+  #     blocked     { |s| s.fetch(:blocked) }
+  #     not_blocked { |s| not_predicate(:blocked).call(s) }
   #   end
   # @example With TTL
   #   Predicate.define(:assessment, cache_ttl: 5.minutes) do
@@ -54,8 +77,8 @@ module Predicate
   #   Predicate.define(:assessment, thread_safe: true, cache_ttl: 5.minutes) do
   #     has_media { |s| is_present?(s[:media_attachment_ids]) }
   #   end
-  def self.define(entity, cache_ttl: nil, thread_safe: false, &block)
-    builder = DSL::Builder.new(entity, nil, cache_ttl: cache_ttl, thread_safe: thread_safe)
+  def self.define(entity, cache_ttl: nil, thread_safe: false, strict: false, &block)
+    builder = DSL::Builder.new(entity, nil, cache_ttl: cache_ttl, thread_safe: thread_safe, strict: strict)
     builder.instance_eval(&block)
     core = builder.build
     Registry.register(entity, core)

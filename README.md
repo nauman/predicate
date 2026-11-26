@@ -256,6 +256,26 @@ end
 # Uses Mutex to protect cache operations
 ```
 
+### Strict Mode (fail instead of `false`)
+
+By default a predicate that raises, or that does not exist, reads as `false` —
+so `not_predicate(:blocked)` reads as `true` when `:blocked` crashed or is
+misspelled. Where a wrong `true` is worse than an exception, opt in:
+
+```ruby
+Predicate.define(:leave, strict: true) do
+  blocked     { |s| s.fetch(:blocked) }
+  not_blocked { |s| not_predicate(:blocked).call(s) }
+end
+
+Predicate.for(:leave).call(:not_blocked, {})
+# => raises Predicate::EvaluationError (predicate_name: :blocked, cause: KeyError)
+Predicate.for(:leave).call(:not_bloked, {})
+# => raises Predicate::UndefinedPredicate
+```
+
+Failures are never cached, so the next call evaluates again.
+
 ### Validation Helpers (Rails Integration)
 
 ```ruby
