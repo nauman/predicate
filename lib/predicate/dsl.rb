@@ -66,6 +66,13 @@ module Predicate
         @core
       end
 
+      # Register a versioned declarative predicate alongside trusted Ruby DSL
+      # predicates.  Declarative documents never execute application Ruby.
+      def declarative(name, document)
+        @core.add_declarative(name, document)
+        self
+      end
+
       # Define a section for grouping related predicates
       # @param section_name [Symbol, String] The section name
       # @param block [Proc] Block containing section predicates

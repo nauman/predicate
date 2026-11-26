@@ -42,7 +42,7 @@ module Predicate
       @cache_size_limit = 1000 # Prevent memory bloat
       @cache_writes = 0        # Track writes for periodic cleanup
       @thread_safe = thread_safe # Enable thread-safe operations
-      @cache_mutex = thread_safe ? Mutex.new : nil # Mutex for thread-safety
+      @cache_mutex = thread_safe ? Mutex.new : nil # Protect cache operations
     end
 
     # Add a predicate to the core
@@ -55,6 +55,22 @@ module Predicate
 
       @predicates[name.to_sym] = block
       clear_cache! # Clear cache when predicates change
+    end
+
+    # Register a safe declarative predicate.  It uses no Ruby evaluation and
+    # is exposed through the same explicit outcome API.
+    def add_declarative(name, document)
+      Predicate::Declarative.validate!(document)
+      add_predicate(name) do |state|
+        outcome = Predicate::Declarative.evaluate(document, state)
+        raise Predicate::InvalidPredicate, outcome.error if outcome.failed?
+        outcome.matched?
+      end
+    end
+    alias add_safe_predicate add_declarative
+
+    def evaluate_declarative(name, state)
+      evaluate(name, state)
     end
 
     # Add section predicates for grouping related predicates
@@ -78,11 +94,30 @@ module Predicate
     # @example
     #   result = core.call(:has_media, { media_attachment_ids: [1, 2] })
     def call(name, state)
-      # Wrap entire operation in mutex if thread-safe mode enabled
-      if @thread_safe
-        @cache_mutex.synchronize { call_impl(name, state) }
-      else
-        call_impl(name, state)
+      call_impl(name, state)
+    end
+
+    # Explicit evaluation. Unlike #call, this never collapses missing facts,
+    # exceptions, or non-boolean results into false.
+    def evaluate(name, state)
+      predicate = find_predicate(name)
+      return Predicate::Outcome.new(:failed, error: "unknown predicate: #{name}") unless predicate
+
+      cache_key = create_cache_key(name, state)
+      cached = cache_read(cache_key)
+      if cached != :miss
+        return Predicate::Outcome.new(cached ? :matched : :not_matched)
+      end
+
+      begin
+        result = predicate.call(state)
+        unless result == true || result == false
+          return Predicate::Outcome.new(:failed, error: "predicate #{name} returned #{result.class}, expected true or false")
+        end
+        cache_write(cache_key, result)
+        Predicate::Outcome.new(result ? :matched : :not_matched)
+      rescue StandardError => e
+        Predicate::Outcome.new(:failed, error: "#{e.class}: #{e.message}")
       end
     end
 
@@ -97,11 +132,12 @@ module Predicate
       cache_key = create_cache_key(name, state)
 
       # Return cached result if available AND still valid (TTL check)
-      if @memoized_results.key?(cache_key) && cache_valid?(cache_key)
+      cached = cache_read(cache_key)
+      if cached != :miss
         @cache_hits += 1
         track_performance(name, 0.0)
         Predicate::Performance.track_cache_hit(name) if defined?(Predicate::Performance)
-        return @memoized_results[cache_key]
+        return cached
       end
 
       @cache_misses += 1
@@ -113,15 +149,18 @@ module Predicate
 
       begin
         result = predicate.call(state)
-
-        # Store result in cache with size management
-        store_in_cache(cache_key, result)
+        # Preserve the trusted Ruby DSL's historical raw-value behavior.  The
+        # explicit #evaluate API rejects raw values.  Nil remains a false result
+        # and exceptions are never cached.
+        if result.nil?
+          track_performance(name, Predicate::Util.now - start_time)
+          return false
+        end
+        cache_write(cache_key, result)
 
         track_performance(name, Predicate::Util.now - start_time)
         result
       rescue StandardError => e
-        # Store false result for failed predicates to avoid re-execution
-        store_in_cache(cache_key, false)
         track_performance(name, Predicate::Util.now - start_time)
 
         # Log error but don't raise - predicates should be resilient
@@ -138,12 +177,7 @@ module Predicate
     # @example
     #   result = core.call_section(:media, :has_media, { media_attachment_ids: [1, 2] })
     def call_section(section_name, predicate_name, state)
-      # Wrap entire operation in mutex if thread-safe mode enabled
-      if @thread_safe
-        @cache_mutex.synchronize { call_section_impl(section_name, predicate_name, state) }
-      else
-        call_section_impl(section_name, predicate_name, state)
-      end
+      call_section_impl(section_name, predicate_name, state)
     end
 
     # Internal implementation of call_section (extracted for mutex wrapping)
@@ -160,10 +194,11 @@ module Predicate
 
       # Check cache with hit/miss tracking (same as regular predicates)
       # Also check TTL validity
-      if @memoized_results.key?(cache_key) && cache_valid?(cache_key)
-        @cache_hits += 1  # Track cache hit
+      cached = cache_read(cache_key)
+      if cached != :miss
+        @cache_hits += 1
         track_performance(combined_name.to_sym, 0.0)
-        return @memoized_results[cache_key]
+        return cached
       end
 
       @cache_misses += 1  # Track cache miss
@@ -180,17 +215,17 @@ module Predicate
 
       begin
         result = predicate.call(state)
-
-        # Use store_in_cache with all guardrails (size limit, LRU eviction)
-        store_in_cache(cache_key, result)
+        if result.nil?
+          duration = Predicate::Util.now - start_time
+          track_performance(combined_name.to_sym, duration)
+          return false
+        end
+        cache_write(cache_key, result)
 
         duration = Predicate::Util.now - start_time
         track_performance(combined_name.to_sym, duration)
         result
       rescue StandardError => e
-        # Use store_in_cache for errors too
-        store_in_cache(cache_key, false)
-
         duration = Predicate::Util.now - start_time
         track_performance(combined_name.to_sym, duration)
 
@@ -261,6 +296,22 @@ module Predicate
     end
 
     private
+
+    def cache_read(cache_key)
+      operation = lambda do
+        if @memoized_results.key?(cache_key) && cache_valid?(cache_key)
+          @memoized_results[cache_key]
+        else
+          :miss
+        end
+      end
+      @thread_safe ? @cache_mutex.synchronize(&operation) : operation.call
+    end
+
+    def cache_write(cache_key, result)
+      operation = lambda { store_in_cache(cache_key, result) }
+      @thread_safe ? @cache_mutex.synchronize(&operation) : operation.call
+    end
 
     # Create an optimized cache key from predicate name and state
     # @param name [Symbol, String] The predicate name
