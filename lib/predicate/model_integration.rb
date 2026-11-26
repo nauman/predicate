@@ -254,6 +254,16 @@ module Predicate
         # Only try to call if predicates are loaded and predicate exists
         if predicates_loaded? && predicate?(predicate_name)
           call_predicate(predicate_name)
+        elsif predicates_loaded? && predicate_instance.strict?
+          # Strict mode: let the core answer (it also finds section predicates).
+          # A name the core does not know is an ordinary missing method, not false.
+          begin
+            call_predicate(predicate_name)
+          rescue UndefinedPredicate => e
+            raise unless e.predicate_name.to_s == predicate_name.to_s
+
+            super
+          end
         else
           # Predicate doesn't exist or not loaded, return false for predicate methods
           false

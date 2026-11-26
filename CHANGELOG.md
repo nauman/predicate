@@ -19,6 +19,9 @@ Versions 1.2.1 and 1.2.2 were never published; their changes ship here.
   `not_predicate(:blocked)` and `none_of(:blocked)` no longer come out `true`
   when `:blocked` crashed or is a typo. The default is unchanged: failures and
   undefined predicates still read as `false`.
+  Through `Predicate::ModelIntegration`, `model.blocked?` raises the same
+  errors, reaches predicates defined inside a section, and a `?` method the
+  core does not know raises `NoMethodError` instead of returning `false`.
 
 ### Changed
 - Section results are cached under their own namespace, so section
