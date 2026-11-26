@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/nauman/predicate/blob/main/docs/proposals/predicate-v1.schema.json",
+  "title": "predicate/v1 rule document (draft)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "revision", "facts", "condition"],
+  "properties": {
+    "schema": { "const": "predicate/v1" },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$", "maxLength": 128 },
+    "revision": { "type": "integer", "minimum": 1 },
+    "description": { "type": "string", "maxLength": 512 },
+    "facts": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 32,
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_]{0,63}$" },
+      "additionalProperties": { "$ref": "#/$defs/fact" }
+    },
+    "condition": { "$ref": "#/$defs/node" }
+  },
+  "$defs": {
+    "fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["boolean", "integer", "number", "string"] },
+        "description": { "type": "string", "maxLength": 256 }
+      }
+    },
+    "factName": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$" },
+    "literal": {
+      "oneOf": [
+        { "type": "boolean" },
+        { "type": "number" },
+        { "type": "string", "maxLength": 256 }
+      ]
+    },
+    "node": {
+      "oneOf": [
+        { "$ref": "#/$defs/group" },
+        { "$ref": "#/$defs/negation" },
+        { "$ref": "#/$defs/comparison" },
+        { "$ref": "#/$defs/membership" }
+      ]
+    },
+    "group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "args"],
+      "properties": {
+        "op": { "enum": ["all", "any"] },
+        "args": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "$ref": "#/$defs/node" } }
+      }
+    },
+    "negation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "arg"],
+      "properties": {
+        "op": { "const": "not" },
+        "arg": { "$ref": "#/$defs/node" }
+      }
+    },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "fact", "value"],
+      "properties": {
+        "op": { "enum": ["eq", "ne", "gt", "gte", "lt", "lte"] },
+        "fact": { "$ref": "#/$defs/factName" },
+        "value": { "$ref": "#/$defs/literal" }
+      }
+    },
+    "membership": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "fact", "values"],
+      "properties": {
+        "op": { "const": "in" },
+        "fact": { "$ref": "#/$defs/factName" },
+        "values": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/literal" }
+        }
+      }
+    }
+  }
+}
