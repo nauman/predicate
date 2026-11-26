@@ -6,6 +6,24 @@ workflow refuses to publish a version with no entry — see RELEASING.md.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-11-26
+
+### Fixed
+- `thread_safe: true` no longer raises `ThreadError` (reported as `false`) when a
+  predicate calls another predicate on the same core; the cache lock is now
+  re-entrant for the thread holding it.
+- A predicate that raises is no longer cached as `false`; the next call
+  evaluates it again.
+- `add_section` clears the cache, so replacing a section no longer serves the
+  old section's results.
+- Section results are cached under their own namespace, so section
+  `:group`/`:ready` and a direct predicate `:group_ready` no longer share an
+  entry.
+
+### Changed
+- Pointed gem metadata and release configuration at the maintainer's personal
+  accounts.
+
 ## [1.2.0] - 2026-02-24
 
 First public release on RubyGems, as `predicate-rb` (the name `predicate`

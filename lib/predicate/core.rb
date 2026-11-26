@@ -53,8 +53,10 @@ module Predicate
     def add_predicate(name, &block)
       raise InvalidPredicate, 'Predicate block is required' unless block_given?
 
-      @predicates[name.to_sym] = block
-      clear_cache! # Clear cache when predicates change
+      synchronize_cache do
+        @predicates[name.to_sym] = block
+        clear_cache! # Clear cache when predicates change
+      end
     end
 
     # Add section predicates for grouping related predicates
@@ -68,7 +70,10 @@ module Predicate
     def add_section(section_name, &block)
       raise InvalidPredicate, 'Section block is required' unless block_given?
 
-      @sections[section_name.to_sym] = block
+      synchronize_cache do
+        @sections[section_name.to_sym] = block
+        clear_cache! # Replacing a section must not serve its old results
+      end
     end
 
     # Call a predicate with state
@@ -79,11 +84,7 @@ module Predicate
     #   result = core.call(:has_media, { media_attachment_ids: [1, 2] })
     def call(name, state)
       # Wrap entire operation in mutex if thread-safe mode enabled
-      if @thread_safe
-        @cache_mutex.synchronize { call_impl(name, state) }
-      else
-        call_impl(name, state)
-      end
+      synchronize_cache { call_impl(name, state) }
     end
 
     # Internal implementation of call (extracted for mutex wrapping)
@@ -120,8 +121,6 @@ module Predicate
         track_performance(name, Predicate::Util.now - start_time)
         result
       rescue StandardError => e
-        # Store false result for failed predicates to avoid re-execution
-        store_in_cache(cache_key, false)
         track_performance(name, Predicate::Util.now - start_time)
 
         # Log error but don't raise - predicates should be resilient
@@ -139,11 +138,7 @@ module Predicate
     #   result = core.call_section(:media, :has_media, { media_attachment_ids: [1, 2] })
     def call_section(section_name, predicate_name, state)
       # Wrap entire operation in mutex if thread-safe mode enabled
-      if @thread_safe
-        @cache_mutex.synchronize { call_section_impl(section_name, predicate_name, state) }
-      else
-        call_section_impl(section_name, predicate_name, state)
-      end
+      synchronize_cache { call_section_impl(section_name, predicate_name, state) }
     end
 
     # Internal implementation of call_section (extracted for mutex wrapping)
@@ -156,7 +151,8 @@ module Predicate
 
       # Use deterministic cache key (same as regular predicates)
       combined_name = "#{section_name}_#{predicate_name}"
-      cache_key = create_cache_key(combined_name, state)
+      # Namespaced so section :a/:b_c never shares an entry with direct :a_b_c
+      cache_key = [:section, section_name.to_sym, predicate_name.to_sym, create_cache_key(nil, state)]
 
       # Check cache with hit/miss tracking (same as regular predicates)
       # Also check TTL validity
@@ -188,9 +184,6 @@ module Predicate
         track_performance(combined_name.to_sym, duration)
         result
       rescue StandardError => e
-        # Use store_in_cache for errors too
-        store_in_cache(cache_key, false)
-
         duration = Predicate::Util.now - start_time
         track_performance(combined_name.to_sym, duration)
 
@@ -230,12 +223,7 @@ module Predicate
 
     # Clear the cache
     def clear_cache!
-      if @thread_safe
-        @cache_mutex.synchronize do
-          @memoized_results.clear
-          @cache_timestamps.clear if @cache_ttl
-        end
-      else
+      synchronize_cache do
         @memoized_results.clear
         @cache_timestamps.clear if @cache_ttl
       end
@@ -261,6 +249,17 @@ module Predicate
     end
 
     private
+
+    # Run the block under the cache mutex when thread-safe mode is on.
+    # Re-entrant: a predicate that calls another predicate on the same core
+    # (or clears its cache) already holds the lock, so it runs the block
+    # directly instead of raising ThreadError on a recursive lock.
+    def synchronize_cache(&block)
+      return yield unless @thread_safe
+      return yield if @cache_mutex.owned?
+
+      @cache_mutex.synchronize(&block)
+    end
 
     # Create an optimized cache key from predicate name and state
     # @param name [Symbol, String] The predicate name
