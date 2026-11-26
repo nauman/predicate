@@ -6,7 +6,9 @@ workflow refuses to publish a version with no entry — see RELEASING.md.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.2] - 2026-11-26
+## [1.3.0] - 2026-11-26
+
+Versions 1.2.1 and 1.2.2 were never published; their changes ship here.
 
 ### Added
 - Opt-in strict mode: `Predicate.define(:leave, strict: true)` (or
@@ -18,13 +20,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   when `:blocked` crashed or is a typo. The default is unchanged: failures and
   undefined predicates still read as `false`.
 
-### Fixed
-- `validates_numericality_of` and `validates_length_of` returned `false` for a
-  non-numeric value or one without a length only because a `LocalJumpError`
-  was swallowed, logging "unexpected return" on every such call under Rails.
-  They now return `false` directly. Results are unchanged.
-
-## [1.2.1] - 2026-11-26
+### Changed
+- Section results are cached under their own namespace, so section
+  `:group`/`:ready` and a direct predicate `:group_ready` no longer share an
+  entry. Cache keys for section predicates therefore differ from 1.2.0; the
+  cache is in-memory only, so nothing persisted is affected.
+- `add_section` clears the cache, so replacing a section no longer serves the
+  old section's results.
+- Pointed gem metadata and release configuration at the maintainer's personal
+  accounts.
 
 ### Fixed
 - `thread_safe: true` no longer raises `ThreadError` (reported as `false`) when a
@@ -32,15 +36,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   re-entrant for the thread holding it.
 - A predicate that raises is no longer cached as `false`; the next call
   evaluates it again.
-- `add_section` clears the cache, so replacing a section no longer serves the
-  old section's results.
-- Section results are cached under their own namespace, so section
-  `:group`/`:ready` and a direct predicate `:group_ready` no longer share an
-  entry.
-
-### Changed
-- Pointed gem metadata and release configuration at the maintainer's personal
-  accounts.
+- `validates_numericality_of` and `validates_length_of` returned `false` for a
+  non-numeric value or one without a length only because a `LocalJumpError`
+  was swallowed, logging "unexpected return" on every such call under Rails.
+  They now return `false` directly. Results are unchanged.
 
 ## [1.2.0] - 2026-02-24
 

@@ -2,7 +2,7 @@
 
 require_relative 'test_helper'
 
-# Regressions for nauman/predicate#4 that 1.2.1 fixes without changing the
+# Regressions for nauman/predicate#4 that 1.3.0 fixes without changing the
 # public contract (raw predicate return values are still passed through).
 class CoreEvaluationRegressionTest < Minitest::Test
   def test_nested_thread_safe_calls_do_not_deadlock
