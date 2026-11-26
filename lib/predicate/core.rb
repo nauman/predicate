@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "monitor"
+
 module Predicate
   # Core Engine
   #
@@ -42,7 +44,7 @@ module Predicate
       @cache_size_limit = 1000 # Prevent memory bloat
       @cache_writes = 0        # Track writes for periodic cleanup
       @thread_safe = thread_safe # Enable thread-safe operations
-      @cache_mutex = thread_safe ? Mutex.new : nil # Mutex for thread-safety
+      @cache_mutex = thread_safe ? Monitor.new : nil # Mutex for thread-safety
     end
 
     # Add a predicate to the core
@@ -53,8 +55,10 @@ module Predicate
     def add_predicate(name, &block)
       raise InvalidPredicate, 'Predicate block is required' unless block_given?
 
-      @predicates[name.to_sym] = block
-      clear_cache! # Clear cache when predicates change
+      synchronize_cache do
+        @predicates[name.to_sym] = block
+        clear_cache!
+      end
     end
 
     # Add section predicates for grouping related predicates
@@ -68,7 +72,10 @@ module Predicate
     def add_section(section_name, &block)
       raise InvalidPredicate, 'Section block is required' unless block_given?
 
-      @sections[section_name.to_sym] = block
+      synchronize_cache do
+        @sections[section_name.to_sym] = block
+        clear_cache!
+      end
     end
 
     # Call a predicate with state
@@ -94,7 +101,7 @@ module Predicate
       start_time = Predicate::Util.now
 
       # Create optimized cache key from predicate name + state hash
-      cache_key = create_cache_key(name, state)
+      cache_key = create_cache_key([:direct, name.to_sym], state)
 
       # Return cached result if available AND still valid (TTL check)
       if @memoized_results.key?(cache_key) && cache_valid?(cache_key)
@@ -112,7 +119,7 @@ module Predicate
       return false unless predicate
 
       begin
-        result = predicate.call(state)
+        result = !!predicate.call(state)
 
         # Store result in cache with size management
         store_in_cache(cache_key, result)
@@ -120,8 +127,6 @@ module Predicate
         track_performance(name, Predicate::Util.now - start_time)
         result
       rescue StandardError => e
-        # Store false result for failed predicates to avoid re-execution
-        store_in_cache(cache_key, false)
         track_performance(name, Predicate::Util.now - start_time)
 
         # Log error but don't raise - predicates should be resilient
@@ -156,7 +161,7 @@ module Predicate
 
       # Use deterministic cache key (same as regular predicates)
       combined_name = "#{section_name}_#{predicate_name}"
-      cache_key = create_cache_key(combined_name, state)
+      cache_key = create_cache_key([:section, section_name.to_sym, predicate_name.to_sym], state)
 
       # Check cache with hit/miss tracking (same as regular predicates)
       # Also check TTL validity
@@ -179,7 +184,7 @@ module Predicate
       return false unless predicate
 
       begin
-        result = predicate.call(state)
+        result = !!predicate.call(state)
 
         # Use store_in_cache with all guardrails (size limit, LRU eviction)
         store_in_cache(cache_key, result)
@@ -188,8 +193,6 @@ module Predicate
         track_performance(combined_name.to_sym, duration)
         result
       rescue StandardError => e
-        # Use store_in_cache for errors too
-        store_in_cache(cache_key, false)
 
         duration = Predicate::Util.now - start_time
         track_performance(combined_name.to_sym, duration)
@@ -262,6 +265,10 @@ module Predicate
 
     private
 
+    def synchronize_cache(&block)
+      @thread_safe ? @cache_mutex.synchronize(&block) : block.call
+    end
+
     # Create an optimized cache key from predicate name and state
     # @param name [Symbol, String] The predicate name
     # @param state [Hash] The state hash
@@ -278,12 +285,12 @@ module Predicate
       # Use first 16 chars of SHA256 hash for shorter keys
       state_hash = Digest::SHA256.hexdigest(state_json)[0..15]
 
-      "#{name}_#{state_hash}"
+      [name, state_hash]
     rescue StandardError => e
       # Fallback to original hash method if JSON fails (for non-serializable objects)
       Rails.logger.warn "Cache key generation fallback: #{e.message}" if defined?(Rails) && Rails.respond_to?(:logger)
       state_signature = state.sort_by { |k, _v| k.to_s }.hash
-      "#{name}_#{state_signature}"
+      [name, state_signature]
     end
 
     # Store result in cache with size management
