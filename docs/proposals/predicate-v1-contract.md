@@ -130,6 +130,35 @@ extractor then sees an empty value. A caller supplying that same invalid
 string directly gets `failed`. This spike covers simple named controls.
 Kuickr integration and partially typed native controls need separate testing.
 
+**Isolated Kuickr intake check.** Using Kuickr `9b3ddbc` and Predicate
+`8ce458c`, Chrome posted the rendered `shared/_submittable_fields.html.erb`
+to an isolated Rails endpoint. The endpoint called the real
+`PageIntakeResponse#declared_field_params` and `Intake::FieldSchema#answers`.
+The spike represented a field casting error as a supplied null in the facts.
+Three optional `unanswered` rules observed the checkbox, date and integer.
+This exercised native form POST and answer casting, without persistence or
+the full Kuickr submission controller.
+
+- Blank, checked, unchecked, valid, fully cleared and fractional inputs gave
+  identical facts and outcomes on both sides. Kuickr uses `check_box_tag`;
+  the checkbox posts `"1"` when checked and omits its key when unchecked.
+- Deleting the day segment of an entered date or typing a lone minus in a
+  number input produced `badInput=true` with an empty value. A normal submit
+  fired zero submit events in each case. With `novalidate`, the browser
+  evaluator returned `failed`; Rails saw the same empty string as a deliberate
+  clear, omitted the key, and returned `matched`. The server cannot recover
+  this distinction from that payload.
+- An ordinary submit accepted `1e2` in Chrome. The browser extracted 100;
+  Kuickr's decimal grammar rejected the wire string. Checking Kuickr's
+  decimal syntax before reading `valueAsNumber` restored parity for
+  `1e2`, `100`, `12.5`, `1000000000000` and `0.0000001`.
+  Host-side field validation errors were mapped to `failed` in the spike.
+
+The original extraction strategy fails the parity criterion. An integration
+needs Kuickr-compatible numeric parsing and a submission path that blocks
+native bad input, or a wire representation that distinguishes it from a
+clear when submission is deliberately allowed.
+
 **Restricted JSON Logic.** With `json-logic-rb` 0.4.0 and
 `json-logic-engine` 5.0.9 available to their respective runtimes, run
 `ruby prototype/check.rb --json-logic` and
