@@ -108,5 +108,469 @@
         }
       }
     }
+  ],
+  "scenarios": [
+    {
+      "rule": {
+        "schema": "predicate/v1",
+        "id": "consent.unanswered",
+        "facts": {
+          "consent": {
+            "type": "boolean",
+            "required": false
+          }
+        },
+        "condition": {
+          "op": "unanswered",
+          "fact": "consent"
+        }
+      },
+      "evaluations": [
+        {
+          "facts": {},
+          "status": "matched"
+        },
+        {
+          "facts": {
+            "consent": false
+          },
+          "status": "not_matched"
+        },
+        {
+          "facts": {
+            "consent": true
+          },
+          "status": "not_matched"
+        },
+        {
+          "facts": {
+            "consent": null
+          },
+          "status": "failed"
+        },
+        {
+          "facts": {
+            "consent": ""
+          },
+          "status": "failed"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "schema": "predicate/v1",
+        "id": "event.after",
+        "facts": {
+          "event_date": {
+            "type": "date",
+            "required": false
+          }
+        },
+        "condition": {
+          "op": "gt",
+          "fact": "event_date",
+          "value": "2026-11-01"
+        }
+      },
+      "evaluations": [
+        {
+          "facts": {},
+          "status": "failed"
+        },
+        {
+          "facts": {
+            "event_date": "2026-11-31"
+          },
+          "status": "failed"
+        },
+        {
+          "facts": {
+            "event_date": "2026-11-01"
+          },
+          "status": "not_matched"
+        },
+        {
+          "facts": {
+            "event_date": "2026-11-02"
+          },
+          "status": "matched"
+        },
+        {
+          "facts": {
+            "event_date": "2026-11-2"
+          },
+          "status": "failed"
+        },
+        {
+          "facts": {
+            "event_date": "2026-11-02T00:00:00Z"
+          },
+          "status": "failed"
+        },
+        {
+          "facts": {
+            "event_date": "2024-02-29"
+          },
+          "status": "not_matched"
+        },
+        {
+          "facts": {
+            "event_date": "2025-02-29"
+          },
+          "status": "failed"
+        },
+        {
+          "facts": {
+            "event_date": ""
+          },
+          "status": "failed"
+        },
+        {
+          "facts": {
+            "event_date": null
+          },
+          "status": "failed"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "schema": "predicate/v1",
+        "id": "approval.negated",
+        "facts": {
+          "approved": {
+            "type": "boolean"
+          }
+        },
+        "condition": {
+          "op": "not",
+          "arg": {
+            "op": "eq",
+            "fact": "approved",
+            "value": true
+          }
+        }
+      },
+      "evaluations": [
+        {
+          "facts": {},
+          "status": "failed"
+        },
+        {
+          "facts": {
+            "approved": false
+          },
+          "status": "matched"
+        },
+        {
+          "facts": {
+            "approved": true
+          },
+          "status": "not_matched"
+        },
+        {
+          "facts": {
+            "approved": "true"
+          },
+          "status": "failed"
+        },
+        {
+          "facts": {
+            "approved": 1
+          },
+          "status": "failed"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "schema": "predicate/v1",
+        "id": "consent.negated",
+        "facts": {
+          "consent": {
+            "type": "boolean",
+            "required": false
+          }
+        },
+        "condition": {
+          "op": "not",
+          "arg": {
+            "op": "eq",
+            "fact": "consent",
+            "value": true
+          }
+        }
+      },
+      "evaluations": [
+        {
+          "facts": {},
+          "status": "failed"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "schema": "predicate/v1",
+        "id": "approval.unanswered",
+        "facts": {
+          "approved": {
+            "type": "boolean"
+          }
+        },
+        "condition": {
+          "op": "unanswered",
+          "fact": "approved"
+        }
+      },
+      "evaluations": [
+        {
+          "facts": {},
+          "status": "failed"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "schema": "predicate/v1",
+        "id": "any.forward",
+        "facts": {
+          "approved": {
+            "type": "boolean"
+          },
+          "count": {
+            "type": "integer"
+          }
+        },
+        "condition": {
+          "op": "any",
+          "args": [
+            {
+              "op": "eq",
+              "fact": "approved",
+              "value": true
+            },
+            {
+              "op": "gt",
+              "fact": "count",
+              "value": 10
+            }
+          ]
+        }
+      },
+      "evaluations": [
+        {
+          "facts": {
+            "approved": true
+          },
+          "status": "matched"
+        },
+        {
+          "facts": {
+            "approved": false
+          },
+          "status": "failed"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "schema": "predicate/v1",
+        "id": "any.reverse",
+        "facts": {
+          "approved": {
+            "type": "boolean"
+          },
+          "count": {
+            "type": "integer"
+          }
+        },
+        "condition": {
+          "op": "any",
+          "args": [
+            {
+              "op": "gt",
+              "fact": "count",
+              "value": 10
+            },
+            {
+              "op": "eq",
+              "fact": "approved",
+              "value": true
+            }
+          ]
+        }
+      },
+      "evaluations": [
+        {
+          "facts": {
+            "approved": true
+          },
+          "status": "failed"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "schema": "predicate/v1",
+        "id": "all.forward",
+        "facts": {
+          "approved": {
+            "type": "boolean"
+          },
+          "count": {
+            "type": "integer"
+          }
+        },
+        "condition": {
+          "op": "all",
+          "args": [
+            {
+              "op": "eq",
+              "fact": "approved",
+              "value": true
+            },
+            {
+              "op": "gt",
+              "fact": "count",
+              "value": 10
+            }
+          ]
+        }
+      },
+      "evaluations": [
+        {
+          "facts": {
+            "approved": false
+          },
+          "status": "not_matched"
+        },
+        {
+          "facts": {
+            "approved": true
+          },
+          "status": "failed"
+        }
+      ]
+    },
+    {
+      "rule": {
+        "schema": "predicate/v1",
+        "id": "all.reverse",
+        "facts": {
+          "approved": {
+            "type": "boolean"
+          },
+          "count": {
+            "type": "integer"
+          }
+        },
+        "condition": {
+          "op": "all",
+          "args": [
+            {
+              "op": "gt",
+              "fact": "count",
+              "value": 10
+            },
+            {
+              "op": "eq",
+              "fact": "approved",
+              "value": true
+            }
+          ]
+        }
+      },
+      "evaluations": [
+        {
+          "facts": {
+            "approved": false
+          },
+          "status": "failed"
+        }
+      ]
+    }
+  ],
+  "invalid_rules": [
+    {
+      "why": "undeclared reference",
+      "document": {
+        "schema": "predicate/v1",
+        "id": "invalid.hidden",
+        "facts": {
+          "approved": {
+            "type": "boolean"
+          }
+        },
+        "condition": {
+          "op": "any",
+          "args": [
+            {
+              "op": "eq",
+              "fact": "approved",
+              "value": true
+            },
+            {
+              "op": "gt",
+              "fact": "count",
+              "value": 10
+            }
+          ]
+        }
+      }
+    },
+    {
+      "why": "wrong literal type",
+      "document": {
+        "schema": "predicate/v1",
+        "id": "invalid.hidden",
+        "facts": {
+          "approved": {
+            "type": "boolean"
+          }
+        },
+        "condition": {
+          "op": "any",
+          "args": [
+            {
+              "op": "eq",
+              "fact": "approved",
+              "value": true
+            },
+            {
+              "op": "eq",
+              "fact": "approved",
+              "value": "true"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "why": "unordered boolean",
+      "document": {
+        "schema": "predicate/v1",
+        "id": "invalid.hidden",
+        "facts": {
+          "approved": {
+            "type": "boolean"
+          }
+        },
+        "condition": {
+          "op": "any",
+          "args": [
+            {
+              "op": "eq",
+              "fact": "approved",
+              "value": true
+            },
+            {
+              "op": "gt",
+              "fact": "approved",
+              "value": true
+            }
+          ]
+        }
+      }
+    }
   ]
 }

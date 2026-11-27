@@ -42,8 +42,13 @@
             "boolean",
             "integer",
             "number",
-            "string"
+            "string",
+            "date"
           ]
+        },
+        "required": {
+          "type": "boolean",
+          "default": true
         }
       }
     },
@@ -71,6 +76,9 @@
         },
         {
           "$ref": "#/$defs/membership"
+        },
+        {
+          "$ref": "#/$defs/presence"
         }
       ]
     },
@@ -161,6 +169,22 @@
           "items": {
             "$ref": "#/$defs/literal"
           }
+        }
+      }
+    },
+    "presence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op",
+        "fact"
+      ],
+      "properties": {
+        "op": {
+          "const": "unanswered"
+        },
+        "fact": {
+          "$ref": "#/$defs/factName"
         }
       }
     }
