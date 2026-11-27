@@ -773,7 +773,7 @@ For bugs or feature requests, contact the development team.
 
 ## 📄 License
 
-Proprietary - StockLive Internal Use Only
+MIT License. See [LICENSE](LICENSE) for details.
 
 ## 👤 Authors
 
