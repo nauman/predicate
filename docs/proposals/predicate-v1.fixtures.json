@@ -36,6 +36,36 @@
         "working_days": "12"
       },
       "status": "failed"
+    },
+    {
+      "facts": {
+        "working_days": 9007199254740991
+      },
+      "status": "matched"
+    },
+    {
+      "facts": {
+        "working_days": -9007199254740991
+      },
+      "status": "not_matched"
+    },
+    {
+      "facts": {
+        "working_days": 9007199254740992
+      },
+      "status": "failed"
+    },
+    {
+      "facts": {
+        "working_days": -9007199254740992
+      },
+      "status": "failed"
+    },
+    {
+      "facts": {
+        "working_days": 12.5
+      },
+      "status": "failed"
     }
   ],
   "invalid_documents": [
@@ -107,6 +137,56 @@
           "value": 1
         }
       }
+    },
+    {
+      "why": "empty all",
+      "document": {
+        "schema": "predicate/v1",
+        "id": "leave.requires_hr",
+        "facts": {
+          "working_days": {
+            "type": "integer"
+          }
+        },
+        "condition": {
+          "op": "all",
+          "args": []
+        }
+      }
+    },
+    {
+      "why": "empty any",
+      "document": {
+        "schema": "predicate/v1",
+        "id": "leave.requires_hr",
+        "facts": {
+          "working_days": {
+            "type": "integer"
+          }
+        },
+        "condition": {
+          "op": "any",
+          "args": []
+        }
+      }
+    },
+    {
+      "why": "non-boolean required flag",
+      "document": {
+        "schema": "predicate/v1",
+        "id": "leave.requires_hr",
+        "facts": {
+          "working_days": {
+            "type": "integer",
+            "required": "false"
+          }
+        },
+        "condition": {
+          "op": "gt",
+          "fact": "working_days",
+          "value": 10
+        }
+      }
     }
   ],
   "scenarios": [
@@ -151,6 +231,18 @@
         {
           "facts": {
             "consent": ""
+          },
+          "status": "failed"
+        },
+        {
+          "facts": {
+            "consent": "yes"
+          },
+          "status": "failed"
+        },
+        {
+          "facts": {
+            "consent": 1
           },
           "status": "failed"
         }
@@ -230,6 +322,18 @@
             "event_date": null
           },
           "status": "failed"
+        },
+        {
+          "facts": {
+            "event_date": "0000-01-01"
+          },
+          "status": "failed"
+        },
+        {
+          "facts": {
+            "event_date": "9999-12-31"
+          },
+          "status": "matched"
         }
       ]
     },
@@ -299,27 +403,6 @@
             "fact": "consent",
             "value": true
           }
-        }
-      },
-      "evaluations": [
-        {
-          "facts": {},
-          "status": "failed"
-        }
-      ]
-    },
-    {
-      "rule": {
-        "schema": "predicate/v1",
-        "id": "approval.unanswered",
-        "facts": {
-          "approved": {
-            "type": "boolean"
-          }
-        },
-        "condition": {
-          "op": "unanswered",
-          "fact": "approved"
         }
       },
       "evaluations": [
@@ -569,6 +652,39 @@
               "value": true
             }
           ]
+        }
+      }
+    },
+    {
+      "why": "unanswered on a required fact (default)",
+      "document": {
+        "schema": "predicate/v1",
+        "id": "approval.unanswered",
+        "facts": {
+          "approved": {
+            "type": "boolean"
+          }
+        },
+        "condition": {
+          "op": "unanswered",
+          "fact": "approved"
+        }
+      }
+    },
+    {
+      "why": "unanswered on a required fact (explicit)",
+      "document": {
+        "schema": "predicate/v1",
+        "id": "approval.unanswered",
+        "facts": {
+          "approved": {
+            "type": "boolean",
+            "required": true
+          }
+        },
+        "condition": {
+          "op": "unanswered",
+          "fact": "approved"
         }
       }
     }

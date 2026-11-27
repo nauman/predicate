@@ -53,7 +53,10 @@ One of three statuses:
 - `not_matched`
 - `failed` when the rule is invalid or an evaluated condition lacks a usable value.
 
-Validate the entire rule at save time, including skipped branches. Check
+Before storing a rule, call Ruby’s `PredicatePrototype.valid?` or JavaScript’s
+`valid(rule)`. The JSON Schema describes the wider draft grammar. Only the
+semantic validator checks prototype support and fact declarations across the
+entire rule, including skipped branches. Check
 declarations, references, operator applicability and literal types. During
 evaluation, visit branches from left to right. A reached failure ends the
 evaluation immediately, including under `not`. The first match ends `any`
@@ -61,7 +64,8 @@ and the first non-match ends `all`. Skipped facts need no value.
 
 Only an omitted optional key satisfies `unanswered`. A supplied, typed
 `false` is answered. An omitted key fails ordinary comparisons even when
-optional. Reading a missing required fact fails, including with `unanswered`.
+optional. Reading a missing required fact fails. An `unanswered` check on a
+required fact is rejected at save time because it can never match.
 Supplied nulls and empty strings fail boolean and date checks. Hosts preserve
 omission when extracting answers. Host submission validation owns unconditional
 field requirements.
@@ -109,6 +113,45 @@ Nothing below is decided. Each can be settled when the implementation needs it.
    content hash so an evaluation can be replayed.
 5. **Ruby API and relation to the DSL.** Method names, and whether a rule can
    be registered alongside trusted Ruby predicates.
+
+## Prototype checks
+
+The shared suite contains 52 cases. Every invalid document must fail both
+save-time validation and evaluation. The Ruby runner also checks five native
+numeric inputs outside the parsed JSON fixture set.
+
+**Browser form state.** Serve this directory with
+`python3 -m http.server --bind 127.0.0.1` and open
+`/prototype/browser-check.html`. Chrome 158 passed the shared suite and
+eight DOM checks on a standalone form. Unchecked checkboxes and blank controls
+produce omitted keys. A checked checkbox produces boolean true. A native date
+control clears an impossible date assigned through its value setter. The
+extractor then sees an empty value. A caller supplying that same invalid
+string directly gets `failed`. This spike covers simple named controls.
+Kuickr integration and partially typed native controls need separate testing.
+
+**Restricted JSON Logic.** With `json-logic-rb` 0.4.0 and
+`json-logic-engine` 5.0.9 available to their respective runtimes, run
+`ruby prototype/check.rb --json-logic` and
+`node prototype/check.mjs --json-logic`. Both engines passed the same 52
+cases. Both backends validate the fixture document before translating it
+to a restricted tree. Native `and`, `or` and `!` handle control flow.
+Custom typed leaves implement `gt`, `eq` and `unanswered`; native
+`throw` and `try` map invalid inputs to the failed outcome.
+
+| Nonblank, non-comment implementation lines | Ruby | JavaScript | Total |
+|---|---:|---:|---:|
+| Shared validation | 50 | 39 | 89 |
+| Custom evaluator including validation | 80 | 69 | 149 |
+| JSON Logic adapter including validation | 88 | 67 | 155 |
+
+Counts cover the corresponding validation and backend source files.
+They exclude dependencies, runners and the browser harness. Translation
+is included in the adapter count. The spike tests JSON Logic as an execution
+backend for the same documents. Directly authoring JSON Logic would change
+the validation and translation costs. Six lines provide little evidence for
+choosing a format. The custom prototype currently achieves parity without
+either engine dependency.
 
 ## When to revisit JSON Logic
 

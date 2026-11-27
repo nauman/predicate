@@ -1,0 +1,69 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Predicate form-state checks</title>
+<form>
+  <label><input type="checkbox" name="consent">Consent</label>
+  <label>Event date <input type="date" name="event_date"></label>
+  <label>Working days <input type="number" name="working_days" step="any"></label>
+</form>
+<output>Running checks…</output>
+<script type="module">
+import {evaluate, valid} from "./evaluator.mjs";
+
+const form = document.querySelector("form");
+const output = document.querySelector("output");
+
+// This sample form has one enabled control per fact and no checkbox fallback.
+function extract() {
+  const facts = Object.create(null);
+  for (const input of form.elements) {
+    if (input.validity.badInput) {
+      facts[input.name] = null;
+    } else if (input.type === "checkbox") {
+      if (input.checked) facts[input.name] = true;
+    } else if (input.value !== "") {
+      facts[input.name] = input.type === "number" ? input.valueAsNumber : input.value;
+    }
+  }
+  return facts;
+}
+
+try {
+  const fixtures = await (await fetch("../predicate-v1.fixtures.json")).json();
+  const scenarios = [fixtures, ...fixtures.scenarios];
+  let checks = 0;
+  function check(condition, description) {
+    if (!condition) throw new Error(description);
+    checks++;
+  }
+  for (const {rule, evaluations} of scenarios) {
+    for (const {facts, status} of evaluations) check(valid(rule) && evaluate(rule, facts) === status, rule.id);
+  }
+  for (const {document: rule, why} of [...fixtures.invalid_documents, ...fixtures.invalid_rules]) {
+    check(!valid(rule) && evaluate(rule, {}) === "failed", why);
+  }
+  const sharedCount = checks;
+  const consent = scenarios.find(s => s.rule.id === "consent.unanswered").rule;
+  const date = scenarios.find(s => s.rule.id === "event.after").rule;
+  const controls = form.elements;
+  check(Object.keys(extract()).length === 0, "blank controls omit their keys");
+  check(evaluate(consent, extract()) === "matched", "unchecked consent");
+  controls.consent.click();
+  check(extract().consent === true && evaluate(consent, extract()) === "not_matched", "checked consent");
+  check(evaluate(date, extract()) === "failed", "comparison on blank date");
+  controls.event_date.value = "2026-11-02";
+  check(evaluate(date, extract()) === "matched", "valid date");
+  controls.event_date.value = "2026-11-31";
+  check(controls.event_date.value === "" && !Object.hasOwn(extract(), "event_date"), "date input sanitized assignment");
+  controls.working_days.value = "12.5";
+  check(evaluate(fixtures.rule, extract()) === "failed", "fractional input");
+  controls.working_days.value = "12";
+  check(evaluate(fixtures.rule, extract()) === "matched", "integer input");
+  controls.working_days.value = "";
+  controls.consent.click();
+  output.textContent = sharedCount + " shared cases and " + (checks - sharedCount) + " DOM cases passed";
+} catch (error) {
+  output.textContent = "Failed: " + error.message;
+  throw error;
+}
+</script>
